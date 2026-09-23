@@ -251,6 +251,8 @@
   <section>
     <h2>Annunci trovati <span id="contatoreNuovi"></span></h2>
     <p class="stato" id="ultimoControllo"></p>
+    <button id="bottoneCercaOra" onclick="avviaRicercaOra()">Cerca ora nei portali</button>
+    <p class="stato" id="statoRicerca"></p>
     <div id="listaAnnunci"></div>
     <p class="vuoto" id="annunciVuoto" style="display:none;">Nessun annuncio trovato per ora.</p>
   </section>
@@ -289,10 +291,10 @@ function salvaConfigurazione() {
   caricaTutto();
 }
 
-async function chiamataGitHub(path, opzioni = {}) {
+async function chiamataGitHub(sottopercorso, opzioni = {}) {
   const repo = repoSalvato();
   const token = tokenSalvato();
-  const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+  const url = `https://api.github.com/repos/${repo}/${sottopercorso}`;
   const risposta = await fetch(url, {
     ...opzioni,
     headers: {
@@ -305,7 +307,7 @@ async function chiamataGitHub(path, opzioni = {}) {
 }
 
 async function leggiFileJson(path) {
-  const risposta = await chiamataGitHub(path);
+  const risposta = await chiamataGitHub(`contents/${path}`);
   if (!risposta.ok) throw new Error(`Impossibile leggere ${path} (${risposta.status})`);
   const dati = await risposta.json();
   const contenuto = decodeURIComponent(escape(atob(dati.content)));
@@ -314,7 +316,7 @@ async function leggiFileJson(path) {
 
 async function scriviFileJson(path, oggetto, sha, messaggio) {
   const contenutoB64 = btoa(unescape(encodeURIComponent(JSON.stringify(oggetto, null, 2))));
-  const risposta = await chiamataGitHub(path, {
+  const risposta = await chiamataGitHub(`contents/${path}`, {
     method: 'PUT',
     body: JSON.stringify({
       message: messaggio,
@@ -454,6 +456,83 @@ async function caricaTutto() {
   if (!repoSalvato()) { mostraSetup(); return; }
   await caricaVie();
   await caricaAnnunci();
+}
+
+function attesa(ms) {
+  return new Promise(risolvi => setTimeout(risolvi, ms));
+}
+
+async function idUltimaEsecuzione() {
+  const risposta = await chiamataGitHub('actions/workflows/monitor.yml/runs?per_page=1');
+  if (!risposta.ok) return null;
+  const dati = await risposta.json();
+  return (dati.workflow_runs && dati.workflow_runs[0]) ? dati.workflow_runs[0].id : null;
+}
+
+async function statoEsecuzione(id) {
+  const risposta = await chiamataGitHub(`actions/runs/${id}`);
+  if (!risposta.ok) return null;
+  return await risposta.json();
+}
+
+async function avviaRicercaOra() {
+  const bottone = document.getElementById('bottoneCercaOra');
+  const stato = document.getElementById('statoRicerca');
+  bottone.disabled = true;
+  stato.textContent = 'Avvio in corso...';
+  try {
+    const idPrecedente = await idUltimaEsecuzione();
+
+    const dispatch = await chiamataGitHub('actions/workflows/monitor.yml/dispatches', {
+      method: 'POST',
+      body: JSON.stringify({ ref: 'main' }),
+    });
+    if (!(dispatch.status === 204 || dispatch.ok)) {
+      throw new Error(`impossibile avviare il workflow (${dispatch.status}). Controlla che il token abbia il permesso 'Actions: Read and write'.`);
+    }
+
+    stato.textContent = 'Ricerca avviata, attendo che parta...';
+    let idNuovo = null;
+    for (let i = 0; i < 8 && !idNuovo; i++) {
+      await attesa(4000);
+      const id = await idUltimaEsecuzione();
+      if (id && id !== idPrecedente) idNuovo = id;
+    }
+    if (!idNuovo) {
+      stato.textContent = "Avviata, ma non riesco a seguirne lo stato da qui. Controlla la tab Actions su GitHub, poi ricarica questa pagina tra un paio di minuti.";
+      return;
+    }
+
+    stato.textContent = 'Ricerca in corso sui portali... (di solito 1-3 minuti)';
+    let completata = false;
+    let conclusione = null;
+    for (let i = 0; i < 30 && !completata; i++) {
+      await attesa(6000);
+      const info = await statoEsecuzione(idNuovo);
+      if (info && info.status === 'completed') {
+        completata = true;
+        conclusione = info.conclusion;
+      }
+    }
+
+    if (!completata) {
+      stato.textContent = "Sta impiegando più del previsto. Controlla la tab Actions su GitHub per vedere a che punto è.";
+      return;
+    }
+    if (conclusione !== 'success') {
+      stato.textContent = `Il controllo è terminato con un errore (${conclusione}). Guarda i log nella tab Actions su GitHub.`;
+      return;
+    }
+
+    stato.textContent = 'Fatto! Aggiorno i risultati...';
+    await caricaAnnunci();
+    stato.textContent = 'Controllo completato.';
+  } catch (e) {
+    stato.textContent = 'Errore: ' + e.message;
+    console.error(e);
+  } finally {
+    bottone.disabled = false;
+  }
 }
 
 caricaTutto();
