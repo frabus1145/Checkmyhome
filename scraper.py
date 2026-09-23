@@ -55,6 +55,23 @@ def testo_contiene_via(testo: str, via: str) -> bool:
     return normalizza(via) in normalizza(testo)
 
 
+def testo_corrisponde(testo: str, via: str, comune: str = "", cap: str = "") -> bool:
+    """Match più preciso: la via deve comparire nel testo, e per ridurre i
+    falsi positivi (vie omonime in comuni diversi) richiediamo che compaia
+    anche il comune oppure il CAP, quando disponibili."""
+    t = normalizza(testo)
+    if normalizza(via) not in t:
+        return False
+    indizi_extra = []
+    if comune:
+        indizi_extra.append(normalizza(comune) in t)
+    if cap:
+        indizi_extra.append(cap.strip() in testo)
+    if indizi_extra:
+        return any(indizi_extra)
+    return True
+
+
 def get_soup(url: str):
     try:
         r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
@@ -72,8 +89,8 @@ def get_soup(url: str):
 # fallisce (o cambia struttura) gli altri continuano a funzionare.
 # ---------------------------------------------------------------------
 
-def cerca_immobiliare(via: str, comune: str):
-    query = quote_plus(f"{via} {comune}")
+def cerca_immobiliare(via: str, comune: str, provincia: str = "", cap: str = ""):
+    query = quote_plus(f"{via} {comune} {cap}".strip())
     url = f"https://www.immobiliare.it/vendita-case/{quote_plus(comune.lower())}/?criterio=rilevanza&noAgenzie=0&q={query}"
     soup = get_soup(url)
     if not soup:
@@ -88,7 +105,7 @@ def cerca_immobiliare(via: str, comune: str):
         if href and not href.startswith("http"):
             href = "https://www.immobiliare.it" + href
         blocco_testo = card.get_text(" ", strip=True)
-        if testo_contiene_via(blocco_testo, via):
+        if testo_corrisponde(blocco_testo, via, comune, cap):
             prezzo_tag = card.select_one("[class*='price']")
             risultati.append({
                 "portale": "Immobiliare.it",
@@ -99,8 +116,8 @@ def cerca_immobiliare(via: str, comune: str):
     return risultati
 
 
-def cerca_casa_it(via: str, comune: str):
-    query = quote_plus(f"{via} {comune}")
+def cerca_casa_it(via: str, comune: str, provincia: str = "", cap: str = ""):
+    query = quote_plus(f"{via} {comune} {cap}".strip())
     url = f"https://www.casa.it/vendita/residenziale/{quote_plus(comune.lower())}/?q={query}"
     soup = get_soup(url)
     if not soup:
@@ -114,7 +131,7 @@ def cerca_casa_it(via: str, comune: str):
         if href and not href.startswith("http"):
             href = "https://www.casa.it" + href
         blocco_testo = card.get_text(" ", strip=True)
-        if testo_contiene_via(blocco_testo, via):
+        if testo_corrisponde(blocco_testo, via, comune, cap):
             prezzo_tag = card.select_one("[class*='price']")
             risultati.append({
                 "portale": "Casa.it",
@@ -125,11 +142,11 @@ def cerca_casa_it(via: str, comune: str):
     return risultati
 
 
-def cerca_idealista(via: str, comune: str):
+def cerca_idealista(via: str, comune: str, provincia: str = "", cap: str = ""):
     # idealista.it ha protezioni anti-bot piuttosto aggressive: questa
     # funzione potrebbe restituire pochi/nessun risultato dietro CAPTCHA.
-    query = quote_plus(f"{comune}")
-    url = f"https://www.idealista.it/vendita-case/{quote_plus(comune.lower())}-{quote_plus(comune.lower())}/"
+    zona = quote_plus(comune.lower())
+    url = f"https://www.idealista.it/vendita-case/{zona}-{zona}/"
     soup = get_soup(url)
     if not soup:
         return []
@@ -142,7 +159,7 @@ def cerca_idealista(via: str, comune: str):
         if href and not href.startswith("http"):
             href = "https://www.idealista.it" + href
         blocco_testo = card.get_text(" ", strip=True)
-        if testo_contiene_via(blocco_testo, via):
+        if testo_corrisponde(blocco_testo, via, comune, cap):
             prezzo_tag = card.select_one("[class*='price']")
             risultati.append({
                 "portale": "Idealista.it",
@@ -153,8 +170,8 @@ def cerca_idealista(via: str, comune: str):
     return risultati
 
 
-def cerca_subito(via: str, comune: str):
-    query = quote_plus(f"{via} {comune}")
+def cerca_subito(via: str, comune: str, provincia: str = "", cap: str = ""):
+    query = quote_plus(f"{via} {comune} {cap}".strip())
     url = f"https://www.subito.it/annunci-lombardia/vendita/appartamenti/?q={query}"
     soup = get_soup(url)
     if not soup:
@@ -166,7 +183,7 @@ def cerca_subito(via: str, comune: str):
             continue
         href = titolo_tag.get("href", "")
         blocco_testo = card.get_text(" ", strip=True)
-        if testo_contiene_via(blocco_testo, via):
+        if testo_corrisponde(blocco_testo, via, comune, cap):
             prezzo_tag = card.select_one("[class*='price']")
             risultati.append({
                 "portale": "Subito.it",
@@ -201,19 +218,22 @@ def main():
     for voce in vie:
         via = voce.get("via", "").strip()
         comune = voce.get("comune", "").strip()
+        provincia = voce.get("provincia", "").strip()
+        cap = voce.get("cap", "").strip()
         if not via or not comune:
             continue
-        print(f"Controllo: {via}, {comune}")
+        etichetta = f"{via}, {comune}" + (f" ({provincia})" if provincia else "") + (f" {cap}" if cap else "")
+        print(f"Controllo: {etichetta}")
         for cerca in PORTALI:
             try:
-                trovati = cerca(via, comune)
+                trovati = cerca(via, comune, provincia, cap)
             except Exception as e:
                 print(f"  [errore portale {cerca.__name__}] {e}", file=sys.stderr)
                 trovati = []
             for annuncio in trovati:
                 if not annuncio.get("url") or annuncio["url"] in url_gia_visti:
                     continue
-                annuncio["via_cercata"] = f"{via}, {comune}"
+                annuncio["via_cercata"] = etichetta
                 annuncio["trovato_il"] = datetime.now(timezone.utc).isoformat()
                 annunci_correnti.append(annuncio)
                 url_gia_visti.add(annuncio["url"])
