@@ -493,8 +493,8 @@ async function avviaRicercaOra() {
 
     stato.textContent = 'Ricerca avviata, attendo che parta...';
     let idNuovo = null;
-    for (let i = 0; i < 8 && !idNuovo; i++) {
-      await attesa(4000);
+    for (let i = 0; i < 15 && !idNuovo; i++) {
+      await attesa(5000);
       const id = await idUltimaEsecuzione();
       if (id && id !== idPrecedente) idNuovo = id;
     }
