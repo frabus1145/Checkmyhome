@@ -240,6 +240,8 @@
     <div class="form-via">
       <input type="text" id="nuovaVia" placeholder="Nome via">
       <input type="text" id="nuovoComune" placeholder="Comune">
+      <input type="text" id="nuovaProvincia" placeholder="Provincia (es. MI)" maxlength="2" style="max-width:90px;">
+      <input type="text" id="nuovoCap" placeholder="CAP" maxlength="5" style="max-width:90px;">
       <button onclick="aggiungiVia()">Aggiungi</button>
     </div>
     <ul class="lista-vie" id="listaVie"></ul>
@@ -347,7 +349,8 @@ function disegnaVie() {
   vuoto.style.display = vie.length ? 'none' : 'block';
   vie.forEach((v, i) => {
     const li = document.createElement('li');
-    li.innerHTML = `<span>${v.via}, ${v.comune}</span>`;
+    const dettagli = [v.comune, v.provincia, v.cap].filter(Boolean).join(' ');
+    li.innerHTML = `<span>${v.via}, ${dettagli}</span>`;
     const bottone = document.createElement('button');
     bottone.textContent = 'rimuovi';
     bottone.onclick = () => rimuoviVia(i);
@@ -359,12 +362,16 @@ function disegnaVie() {
 async function aggiungiVia() {
   const via = document.getElementById('nuovaVia').value.trim();
   const comune = document.getElementById('nuovoComune').value.trim();
+  const provincia = document.getElementById('nuovaProvincia').value.trim().toUpperCase();
+  const cap = document.getElementById('nuovoCap').value.trim();
   if (!via || !comune) { alert('Inserisci sia la via che il comune.'); return; }
   statoConfig.json.vie = statoConfig.json.vie || [];
-  statoConfig.json.vie.push({ via, comune });
+  statoConfig.json.vie.push({ via, comune, provincia, cap });
   await salvaVieSuGitHub(`Aggiunta via: ${via}, ${comune}`);
   document.getElementById('nuovaVia').value = '';
   document.getElementById('nuovoComune').value = '';
+  document.getElementById('nuovaProvincia').value = '';
+  document.getElementById('nuovoCap').value = '';
 }
 
 async function rimuoviVia(indice) {
