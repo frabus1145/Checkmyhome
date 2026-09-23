@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Monitor Case</title>
+<style>
+  :root {
+    --carta: #f6f3ec;
+    --inchiostro: #2b2620;
+    --inchiostro-tenue: #6b6255;
+    --timbro: #8a3324;
+    --timbro-tenue: #c9a89a;
+    --riga: #d9d2c2;
+    --verde-nuovo: #3c5a3c;
+    --verde-nuovo-bg: #e6ede6;
+    font-family: "Iowan Old Style", "Georgia", serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--carta);
+    color: var(--inchiostro);
+    min-height: 100%;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body {
+    padding: 32px 20px 60px;
+  }
+  .pagina {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  header {
+    border-bottom: 2px solid var(--inchiostro);
+    padding-bottom: 14px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+  .sotto-titolo {
+    color: var(--inchiostro-tenue);
+    font-size: 0.85rem;
+    font-style: italic;
+  }
+  section {
+    margin-bottom: 34px;
+  }
+  h2 {
+    font-size: 1.05rem;
+    margin: 0 0 12px;
+    color: var(--timbro);
+    font-weight: 600;
+  }
+  .campo-setup {
+    display: none;
+    background: #fff;
+    border: 1px solid var(--riga);
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  .campo-setup.visibile { display: block; }
+  .campo-setup label {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--inchiostro-tenue);
+    margin-bottom: 4px;
+  }
+  .campo-setup input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 12px;
+    border: 1px solid var(--riga);
+    background: var(--carta);
+    font-family: inherit;
+    font-size: 0.95rem;
+  }
+  button {
+    font-family: inherit;
+    background: var(--inchiostro);
+    color: var(--carta);
+    border: none;
+    padding: 9px 16px;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  button:hover { background: var(--timbro); }
+  button.secondario {
+    background: transparent;
+    color: var(--inchiostro-tenue);
+    border: 1px solid var(--riga);
+  }
+  button.secondario:hover { color: var(--timbro); border-color: var(--timbro-tenue); background: transparent; }
+
+  .form-via {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .form-via input {
+    flex: 1;
+    min-width: 140px;
+    padding: 9px;
+    border: 1px solid var(--riga);
+    background: #fff;
+    font-family: inherit;
+  }
+
+  ul.lista-vie {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  ul.lista-vie li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--riga);
+  }
+  ul.lista-vie li span { font-size: 0.95rem; }
+  ul.lista-vie li button {
+    background: transparent;
+    color: var(--timbro);
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+
+  .contatore-nuovi {
+    display: inline-block;
+    background: var(--timbro);
+    color: #fff;
+    padding: 2px 10px;
+    font-size: 0.8rem;
+    margin-left: 8px;
+  }
+
+  .annuncio {
+    border: 1px solid var(--riga);
+    padding: 14px;
+    margin-bottom: 10px;
+    background: #fff;
+  }
+  .annuncio.nuovo {
+    background: var(--verde-nuovo-bg);
+    border-color: var(--verde-nuovo);
+  }
+  .annuncio .riga-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.78rem;
+    color: var(--inchiostro-tenue);
+    margin-bottom: 6px;
+  }
+  .annuncio .badge-nuovo {
+    color: var(--verde-nuovo);
+    font-weight: 600;
+  }
+  .annuncio a {
+    color: var(--inchiostro);
+    font-size: 1rem;
+    text-decoration: none;
+    border-bottom: 1px solid var(--timbro-tenue);
+  }
+  .annuncio a:hover { color: var(--timbro); }
+  .annuncio .prezzo {
+    margin-top: 6px;
+    font-size: 0.9rem;
+    color: var(--inchiostro-tenue);
+  }
+
+  .stato {
+    font-size: 0.82rem;
+    color: var(--inchiostro-tenue);
+    font-style: italic;
+  }
+  .vuoto {
+    color: var(--inchiostro-tenue);
+    font-style: italic;
+    padding: 20px 0;
+    text-align: center;
+  }
+  footer {
+    margin-top: 40px;
+    font-size: 0.75rem;
+    color: var(--inchiostro-tenue);
+    text-align: center;
+  }
+  footer button { margin-top: 6px; }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --carta: #1c1a16;
+      --inchiostro: #ece7db;
+      --inchiostro-tenue: #a39c8c;
+      --riga: #3a352c;
+      --timbro: #d98a6f;
+      --timbro-tenue: #6b4c3f;
+      --verde-nuovo: #8fbf8f;
+      --verde-nuovo-bg: #223022;
+    }
+    .campo-setup, .form-via input, .annuncio { background: #24211b; }
+  }
+</style>
+</head>
+<body>
+<div class="pagina">
+
+  <header>
+    <div>
+      <h1>Monitor Case</h1>
+      <div class="sotto-titolo">Vie sotto controllo in Lombardia</div>
+    </div>
+    <span id="contatoreHeader"></span>
+  </header>
+
+  <div class="campo-setup" id="setup">
+    <h2>Configurazione (una tantum)</h2>
+    <label for="inputRepo">Repository GitHub (formato: utente/nome-repo)</label>
+    <input type="text" id="inputRepo" placeholder="es. mariorossi/monitor-case">
+    <label for="inputToken">Token di accesso GitHub</label>
+    <input type="password" id="inputToken" placeholder="ghp_... oppure github_pat_...">
+    <button onclick="salvaConfigurazione()">Salva e continua</button>
+    <button class="secondario" onclick="document.getElementById('setup').classList.remove('visibile')">Annulla</button>
+  </div>
+
+  <section>
+    <h2>Vie monitorate</h2>
+    <div class="form-via">
+      <input type="text" id="nuovaVia" placeholder="Nome via">
+      <input type="text" id="nuovoComune" placeholder="Comune">
+      <button onclick="aggiungiVia()">Aggiungi</button>
+    </div>
+    <ul class="lista-vie" id="listaVie"></ul>
+    <p class="vuoto" id="vieVuoto" style="display:none;">Nessuna via aggiunta ancora.</p>
+  </section>
+
+  <section>
+    <h2>Annunci trovati <span id="contatoreNuovi"></span></h2>
+    <p class="stato" id="ultimoControllo"></p>
+    <div id="listaAnnunci"></div>
+    <p class="vuoto" id="annunciVuoto" style="display:none;">Nessun annuncio trovato per ora.</p>
+  </section>
+
+  <footer>
+    Dati letti dal repository GitHub privato collegato a questa pagina.
+    <br>
+    <button class="secondario" onclick="mostraSetup()">Modifica repository / token</button>
+  </footer>
+
+</div>
+
+<script>
+const CHIAVE_REPO = 'monitorcase_repo';
+const CHIAVE_TOKEN = 'monitorcase_token';
+const CHIAVE_VISTI = 'monitorcase_visti';
+
+function repoSalvato() { return localStorage.getItem(CHIAVE_REPO) || ''; }
+function tokenSalvato() { return localStorage.getItem(CHIAVE_TOKEN) || ''; }
+
+function mostraSetup() {
+  document.getElementById('inputRepo').value = repoSalvato();
+  document.getElementById('setup').classList.add('visibile');
+}
+
+function salvaConfigurazione() {
+  const repo = document.getElementById('inputRepo').value.trim();
+  const token = document.getElementById('inputToken').value.trim();
+  if (!repo || !repo.includes('/')) {
+    alert('Inserisci il repository nel formato utente/nome-repo');
+    return;
+  }
+  localStorage.setItem(CHIAVE_REPO, repo);
+  if (token) localStorage.setItem(CHIAVE_TOKEN, token);
+  document.getElementById('setup').classList.remove('visibile');
+  caricaTutto();
+}
+
+async function chiamataGitHub(path, opzioni = {}) {
+  const repo = repoSalvato();
+  const token = tokenSalvato();
+  const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+  const risposta = await fetch(url, {
+    ...opzioni,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      ...(opzioni.headers || {}),
+    },
+  });
+  return risposta;
+}
+
+async function leggiFileJson(path) {
+  const risposta = await chiamataGitHub(path);
+  if (!risposta.ok) throw new Error(`Impossibile leggere ${path} (${risposta.status})`);
+  const dati = await risposta.json();
+  const contenuto = decodeURIComponent(escape(atob(dati.content)));
+  return { json: JSON.parse(contenuto), sha: dati.sha };
+}
+
+async function scriviFileJson(path, oggetto, sha, messaggio) {
+  const contenutoB64 = btoa(unescape(encodeURIComponent(JSON.stringify(oggetto, null, 2))));
+  const risposta = await chiamataGitHub(path, {
+    method: 'PUT',
+    body: JSON.stringify({
+      message: messaggio,
+      content: contenutoB64,
+      sha: sha,
+    }),
+  });
+  if (!risposta.ok) {
+    const errore = await risposta.text();
+    throw new Error(`Errore nel salvataggio di ${path}: ${errore}`);
+  }
+  return risposta.json();
+}
+
+let statoConfig = { json: { vie: [] }, sha: null };
+
+async function caricaVie() {
+  try {
+    statoConfig = await leggiFileJson('config.json');
+  } catch (e) {
+    console.error(e);
+    statoConfig = { json: { vie: [] }, sha: null };
+  }
+  disegnaVie();
+}
+
+function disegnaVie() {
+  const lista = document.getElementById('listaVie');
+  const vuoto = document.getElementById('vieVuoto');
+  const vie = statoConfig.json.vie || [];
+  lista.innerHTML = '';
+  vuoto.style.display = vie.length ? 'none' : 'block';
+  vie.forEach((v, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${v.via}, ${v.comune}</span>`;
+    const bottone = document.createElement('button');
+    bottone.textContent = 'rimuovi';
+    bottone.onclick = () => rimuoviVia(i);
+    li.appendChild(bottone);
+    lista.appendChild(li);
+  });
+}
+
+async function aggiungiVia() {
+  const via = document.getElementById('nuovaVia').value.trim();
+  const comune = document.getElementById('nuovoComune').value.trim();
+  if (!via || !comune) { alert('Inserisci sia la via che il comune.'); return; }
+  statoConfig.json.vie = statoConfig.json.vie || [];
+  statoConfig.json.vie.push({ via, comune });
+  await salvaVieSuGitHub(`Aggiunta via: ${via}, ${comune}`);
+  document.getElementById('nuovaVia').value = '';
+  document.getElementById('nuovoComune').value = '';
+}
+
+async function rimuoviVia(indice) {
+  const rimossa = statoConfig.json.vie.splice(indice, 1)[0];
+  await salvaVieSuGitHub(`Rimossa via: ${rimossa.via}, ${rimossa.comune}`);
+}
+
+async function salvaVieSuGitHub(messaggio) {
+  try {
+    const risultato = await scriviFileJson('config.json', statoConfig.json, statoConfig.sha, messaggio);
+    statoConfig.sha = risultato.content.sha;
+    disegnaVie();
+  } catch (e) {
+    alert('Errore nel salvare la via: ' + e.message);
+    console.error(e);
+  }
+}
+
+function elencoVisti() {
+  try { return JSON.parse(localStorage.getItem(CHIAVE_VISTI) || '[]'); }
+  catch { return []; }
+}
+function segnaTuttoVisto(urlList) {
+  localStorage.setItem(CHIAVE_VISTI, JSON.stringify(urlList));
+}
+
+async function caricaAnnunci() {
+  const contenitore = document.getElementById('listaAnnunci');
+  const vuoto = document.getElementById('annunciVuoto');
+  const contatoreNuovi = document.getElementById('contatoreNuovi');
+  const contatoreHeader = document.getElementById('contatoreHeader');
+  const ultimoControllo = document.getElementById('ultimoControllo');
+
+  let dati;
+  try {
+    dati = (await leggiFileJson('annunci.json')).json;
+  } catch (e) {
+    contenitore.innerHTML = '';
+    vuoto.style.display = 'block';
+    vuoto.textContent = 'Impossibile leggere annunci.json (' + e.message + ')';
+    return;
+  }
+
+  const annunci = (dati.annunci || []).slice().reverse();
+  const visti = new Set(elencoVisti());
+  const nuovi = annunci.filter(a => !visti.has(a.url));
+
+  ultimoControllo.textContent = dati.ultimo_controllo
+    ? 'Ultimo controllo: ' + new Date(dati.ultimo_controllo).toLocaleString('it-IT')
+    : 'Nessun controllo eseguito ancora.';
+
+  contatoreNuovi.innerHTML = nuovi.length
+    ? `<span class="contatore-nuovi">${nuovi.length} nuovi</span>` : '';
+  contatoreHeader.innerHTML = nuovi.length
+    ? `<span class="contatore-nuovi">${nuovi.length} nuovi</span>` : '';
+
+  contenitore.innerHTML = '';
+  vuoto.style.display = annunci.length ? 'none' : 'block';
+
+  annunci.forEach(a => {
+    const div = document.createElement('div');
+    const eNuovo = !visti.has(a.url);
+    div.className = 'annuncio' + (eNuovo ? ' nuovo' : '');
+    div.innerHTML = `
+      <div class="riga-top">
+        <span>${a.portale} &middot; ${a.via_cercata || ''}</span>
+        ${eNuovo ? '<span class="badge-nuovo">nuovo</span>' : ''}
+      </div>
+      <a href="${a.url}" target="_blank" rel="noopener">${a.titolo}</a>
+      ${a.prezzo ? `<div class="prezzo">${a.prezzo}</div>` : ''}
+    `;
+    contenitore.appendChild(div);
+  });
+
+  // segna come visti dopo averli mostrati come "nuovi" in questa apertura
+  segnaTuttoVisto(annunci.map(a => a.url));
+}
+
+async function caricaTutto() {
+  if (!repoSalvato()) { mostraSetup(); return; }
+  await caricaVie();
+  await caricaAnnunci();
+}
+
+caricaTutto();
+</script>
+</body>
+</html>
