@@ -51,16 +51,34 @@ def normalizza(testo: str) -> str:
     return testo
 
 
+PREFISSI_GENERICI = {
+    "via", "viale", "vicolo", "corso", "piazza", "piazzale",
+    "largo", "strada", "vco", "v.le", "v.",
+}
+
+
+def parole_significative(via: str):
+    parole = normalizza(via).split(" ")
+    return [p for p in parole if p and p not in PREFISSI_GENERICI]
+
+
 def testo_contiene_via(testo: str, via: str) -> bool:
-    return normalizza(via) in normalizza(testo)
+    t = normalizza(testo)
+    parole = parole_significative(via)
+    if not parole:
+        return False
+    return all(p in t for p in parole)
 
 
 def testo_corrisponde(testo: str, via: str, comune: str = "", cap: str = "") -> bool:
-    """Match più preciso: la via deve comparire nel testo, e per ridurre i
-    falsi positivi (vie omonime in comuni diversi) richiediamo che compaia
-    anche il comune oppure il CAP, quando disponibili."""
+    """Match flessibile: tutte le parole significative della via devono
+    comparire nel testo (in qualunque ordine/posizione, es. 'via pertini'
+    trova anche 'Via Sandro Pertini'). Per ridurre i falsi positivi (vie
+    omonime in comuni diversi) richiediamo inoltre che compaia anche il
+    comune oppure il CAP, quando disponibili."""
     t = normalizza(testo)
-    if normalizza(via) not in t:
+    parole = parole_significative(via)
+    if not parole or not all(p in t for p in parole):
         return False
     indizi_extra = []
     if comune:
